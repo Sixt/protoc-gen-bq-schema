@@ -30,7 +30,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/protoc-gen-bq-schema/protos"
+	"github.com/sixt/protoc-gen-bq-schema/protos"
 
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/proto"
@@ -85,7 +85,9 @@ func registerType(pkgName *string, msg *descriptor.DescriptorProto) {
 			pkg = child
 		}
 	}
-	pkg.types[msg.GetName()] = msg
+	if msg != nil {
+		pkg.types[msg.GetName()] = msg
+	}
 }
 
 func (pkg *ProtoPackage) lookupType(name string) (*descriptor.DescriptorProto, bool) {
@@ -399,6 +401,7 @@ func convert(req *plugin.CodeGeneratorRequest) (*plugin.CodeGeneratorResponse, e
 			glog.V(1).Infof("Loading a message type %s from package %s", msg.GetName(), file.GetPackage())
 			registerType(file.Package, msg)
 		}
+		registerType(file.Package, nil)
 	}
 	for _, file := range req.GetProtoFile() {
 		if _, ok := generateTargets[file.GetName()]; ok {
