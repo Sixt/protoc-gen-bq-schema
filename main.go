@@ -436,6 +436,7 @@ func convertFrom(rd io.Reader) (*plugin.CodeGeneratorResponse, error) {
 }
 
 func main() {
+	fmt.Printf("test")
 	flag.Parse()
 	ok := true
 	glog.Info("Processing code generator request")
