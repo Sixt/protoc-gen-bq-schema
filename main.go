@@ -16,8 +16,8 @@
 // It is spawned by protoc and generates schema for BigQuery, encoded in JSON.
 //
 // usage:
-//  $ bin/protoc --bq-schema_out=path/to/outdir foo.proto
 //
+//	$ bin/protoc --bq-schema_out=path/to/outdir foo.proto
 package main
 
 import (
@@ -34,7 +34,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/proto"
-	descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
 )
 
@@ -123,7 +123,7 @@ func (pkg *ProtoPackage) relativelyLookupType(name string) (*descriptor.Descript
 	components := strings.SplitN(name, ".", 2)
 	switch len(components) {
 	case 0:
-		glog.V(1).Info("empty message name")
+		glog.V(0).Info("empty message name")
 		return nil, false
 	case 1:
 		found, ok := pkg.types[components[0]]
@@ -138,7 +138,7 @@ func (pkg *ProtoPackage) relativelyLookupType(name string) (*descriptor.Descript
 			found, ok := relativelyLookupNestedType(msg, components[1])
 			return found, ok
 		}
-		glog.V(1).Infof("no such package nor message %s in %s", components[0], pkg.name)
+		glog.V(0).Infof("no such package nor message %s in %s", components[0], pkg.name)
 		return nil, false
 	default:
 		glog.Fatal("not reached")
@@ -281,7 +281,7 @@ func convertField(curPkg *ProtoPackage, desc *descriptor.FieldDescriptorProto, m
 }
 
 func convertMessageType(curPkg *ProtoPackage, msg *descriptor.DescriptorProto, opts *protos.BigQueryMessageOptions) (schema []*Field, err error) {
-	if glog.V(4) {
+	if glog.V(0) {
 		glog.Info("Converting message: ", proto.MarshalTextString(msg))
 	}
 
@@ -335,7 +335,7 @@ func convertFile(file *descriptor.FileDescriptorProto) ([]*plugin.CodeGeneratorR
 			continue
 		}
 
-		glog.V(2).Info("Generating schema for a message type ", msg.GetName())
+		glog.V(0).Info("Generating schema for a message type ", msg.GetName())
 		schema, err := convertMessageType(pkg, msg, opts)
 		if err != nil {
 			glog.Errorf("Failed to convert %s: %v", name, err)
@@ -398,14 +398,14 @@ func convert(req *plugin.CodeGeneratorRequest) (*plugin.CodeGeneratorResponse, e
 	res := &plugin.CodeGeneratorResponse{}
 	for _, file := range req.GetProtoFile() {
 		for _, msg := range file.GetMessageType() {
-			glog.V(1).Infof("Loading a message type %s from package %s", msg.GetName(), file.GetPackage())
+			glog.V(0).Infof("Loading a message type %s from package %s", msg.GetName(), file.GetPackage())
 			registerType(file.Package, msg)
 		}
 		registerType(file.Package, nil)
 	}
 	for _, file := range req.GetProtoFile() {
 		if _, ok := generateTargets[file.GetName()]; ok {
-			glog.V(1).Info("Converting ", file.GetName())
+			glog.V(0).Info("Converting ", file.GetName())
 			converted, err := convertFile(file)
 			if err != nil {
 				res.Error = proto.String(fmt.Sprintf("Failed to convert %s: %v", file.GetName(), err))
@@ -418,7 +418,7 @@ func convert(req *plugin.CodeGeneratorRequest) (*plugin.CodeGeneratorResponse, e
 }
 
 func convertFrom(rd io.Reader) (*plugin.CodeGeneratorResponse, error) {
-	glog.V(1).Info("Reading code generation request")
+	glog.V(0).Info("Reading code generation request")
 	input, err := ioutil.ReadAll(rd)
 	if err != nil {
 		glog.Error("Failed to read request:", err)
@@ -431,7 +431,7 @@ func convertFrom(rd io.Reader) (*plugin.CodeGeneratorResponse, error) {
 		return nil, err
 	}
 
-	glog.V(1).Info("Converting input")
+	glog.V(0).Info("Converting input")
 	return convert(req)
 }
 
