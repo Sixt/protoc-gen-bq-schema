@@ -16,8 +16,8 @@
 // It is spawned by protoc and generates schema for BigQuery, encoded in JSON.
 //
 // usage:
-//  $ bin/protoc --bq-schema_out=path/to/outdir foo.proto
 //
+//	$ bin/protoc --bq-schema_out=path/to/outdir foo.proto
 package main
 
 import (
@@ -34,7 +34,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/proto"
-	descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
 )
 
@@ -372,14 +372,9 @@ func getBigqueryMessageOptions(msg *descriptor.DescriptorProto) (*protos.BigQuer
 		return nil, nil
 	}
 
-	optionValue, err := proto.GetExtension(options, protos.E_BigqueryOpts)
-	if err == nil {
-		return optionValue.(*protos.BigQueryMessageOptions), nil
-	}
-
 	// try to decode the extension using old definition before failing
-	optionValue, newErr := proto.GetExtension(options, e_TableName)
-	if newErr != nil {
+	optionValue, err := proto.GetExtension(options, e_TableName)
+	if err != nil {
 		return nil, err // return original error
 	}
 	// translate this old definition to the expected message type
