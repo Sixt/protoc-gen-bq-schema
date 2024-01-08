@@ -1,2 +1,6 @@
 owner: OSRE-PIE
 name: protoc-gen-bq-schema
+pii:
+  exists: false
+  location: 
+  url: 
