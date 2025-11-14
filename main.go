@@ -33,7 +33,6 @@ import (
 	"github.com/sixt/protoc-gen-bq-schema/protos"
 
 	"github.com/golang/glog"
-	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	descriptor "google.golang.org/protobuf/types/descriptorpb"
 	plugin "google.golang.org/protobuf/types/pluginpb"
@@ -226,7 +225,10 @@ func convertField(curPkg *ProtoPackage, desc *descriptor.FieldDescriptorProto, m
 
 	opts := desc.GetOptions()
 	if opts != nil && proto.HasExtension(opts, protos.E_Bigquery) {
-		opt := proto.GetExtension(opts, protos.E_Bigquery).(*protos.BigQueryFieldOptions)
+		opt, _ := proto.GetExtension(opts, protos.E_Bigquery).(*protos.BigQueryFieldOptions)
+		if opt == nil {
+			return nil, fmt.Errorf("type assertion failed")
+		}
 		if opt.GetIgnore() {
 			// skip the field below
 			return nil, nil
@@ -236,16 +238,16 @@ func convertField(curPkg *ProtoPackage, desc *descriptor.FieldDescriptorProto, m
 			field.Mode = "REQUIRED"
 		}
 
-		if to := opt.GetTypeOverride(); len(to) > 0 {
-			field.Type = to
+		if typ := opt.GetTypeOverride(); typ != "" {
+			field.Type = typ
 		}
 
-		if n := opt.GetName(); len(n) > 0 {
-			field.Name = n
+		if name := opt.GetName(); name != "" {
+			field.Name = name
 		}
 
-		if d := opt.GetDescription(); len(d) > 0 {
-			field.Description = d
+		if description := opt.GetDescription(); description != "" {
+			field.Description = description
 		}
 	}
 
@@ -279,8 +281,7 @@ func convertField(curPkg *ProtoPackage, desc *descriptor.FieldDescriptorProto, m
 
 func convertMessageType(curPkg *ProtoPackage, msg *descriptor.DescriptorProto, opts *protos.BigQueryMessageOptions) (schema []*Field, err error) {
 	if glog.V(4) {
-		b, _ := prototext.Marshal(msg)
-		glog.Info("Converting message: ", string(b))
+		glog.Info("Converting message: ", msg)
 	}
 
 	for _, fieldDesc := range msg.GetField() {
