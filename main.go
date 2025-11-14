@@ -16,8 +16,8 @@
 // It is spawned by protoc and generates schema for BigQuery, encoded in JSON.
 //
 // usage:
-//  $ bin/protoc --bq-schema_out=path/to/outdir foo.proto
 //
+//	$ bin/protoc --bq-schema_out=path/to/outdir foo.proto
 package main
 
 import (
@@ -33,9 +33,10 @@ import (
 	"github.com/sixt/protoc-gen-bq-schema/protos"
 
 	"github.com/golang/glog"
-	"github.com/golang/protobuf/proto"
-	descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
-	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
+	"google.golang.org/protobuf/encoding/prototext"
+	"google.golang.org/protobuf/proto"
+	descriptor "google.golang.org/protobuf/types/descriptorpb"
+	plugin "google.golang.org/protobuf/types/pluginpb"
 )
 
 var (
@@ -225,30 +226,27 @@ func convertField(curPkg *ProtoPackage, desc *descriptor.FieldDescriptorProto, m
 
 	opts := desc.GetOptions()
 	if opts != nil && proto.HasExtension(opts, protos.E_Bigquery) {
-		rawOpt, err := proto.GetExtension(opts, protos.E_Bigquery)
-		if err != nil {
-			return nil, err
-		}
-		opt := *rawOpt.(*protos.BigQueryFieldOptions)
-		if opt.Ignore {
+		rawOpt := proto.GetExtension(opts, protos.E_Bigquery)
+		opt := rawOpt.(*protos.BigQueryFieldOptions)
+		if opt.GetIgnore() {
 			// skip the field below
 			return nil, nil
 		}
 
-		if opt.Require {
+		if opt.GetRequire() {
 			field.Mode = "REQUIRED"
 		}
 
-		if len(opt.TypeOverride) > 0 {
-			field.Type = opt.TypeOverride
+		if to := opt.GetTypeOverride(); len(to) > 0 {
+			field.Type = to
 		}
 
-		if len(opt.Name) > 0 {
-			field.Name = opt.Name
+		if n := opt.GetName(); len(n) > 0 {
+			field.Name = n
 		}
 
-		if len(opt.Description) > 0 {
-			field.Description = opt.Description
+		if d := opt.GetDescription(); len(d) > 0 {
+			field.Description = d
 		}
 	}
 
@@ -282,7 +280,8 @@ func convertField(curPkg *ProtoPackage, desc *descriptor.FieldDescriptorProto, m
 
 func convertMessageType(curPkg *ProtoPackage, msg *descriptor.DescriptorProto, opts *protos.BigQueryMessageOptions) (schema []*Field, err error) {
 	if glog.V(4) {
-		glog.Info("Converting message: ", proto.MarshalTextString(msg))
+		b, _ := prototext.Marshal(msg)
+		glog.Info("Converting message: ", string(b))
 	}
 
 	for _, fieldDesc := range msg.GetField() {
@@ -298,19 +297,6 @@ func convertMessageType(curPkg *ProtoPackage, msg *descriptor.DescriptorProto, o
 		}
 	}
 	return
-}
-
-// NB: This is what the extension for tag 1021 used to look like. For some
-// level of backwards compatibility, we will try to parse the extension using
-// this definition if we get an error trying to parse it as the current
-// definition (a message, to support multiple extension fields therein).
-var e_TableName = &proto.ExtensionDesc{
-	ExtendedType:  (*descriptor.MessageOptions)(nil),
-	ExtensionType: (*string)(nil),
-	Field:         1021,
-	Name:          "gen_bq_schema.table_name",
-	Tag:           "bytes,1021,opt,name=table_name,json=tableName",
-	Filename:      "bq_table.proto",
 }
 
 func convertFile(file *descriptor.FileDescriptorProto) ([]*plugin.CodeGeneratorResponse_File, error) {
@@ -371,22 +357,7 @@ func getBigqueryMessageOptions(msg *descriptor.DescriptorProto) (*protos.BigQuer
 	if !proto.HasExtension(options, protos.E_BigqueryOpts) {
 		return nil, nil
 	}
-
-	optionValue, err := proto.GetExtension(options, protos.E_BigqueryOpts)
-	if err == nil {
-		return optionValue.(*protos.BigQueryMessageOptions), nil
-	}
-
-	// try to decode the extension using old definition before failing
-	optionValue, newErr := proto.GetExtension(options, e_TableName)
-	if newErr != nil {
-		return nil, err // return original error
-	}
-	// translate this old definition to the expected message type
-	name := *optionValue.(*string)
-	return &protos.BigQueryMessageOptions{
-		TableName: name,
-	}, nil
+	return proto.GetExtension(options, protos.E_BigqueryOpts).(*protos.BigQueryMessageOptions), nil
 }
 
 func convert(req *plugin.CodeGeneratorRequest) (*plugin.CodeGeneratorResponse, error) {
@@ -395,7 +366,9 @@ func convert(req *plugin.CodeGeneratorRequest) (*plugin.CodeGeneratorResponse, e
 		generateTargets[file] = true
 	}
 
-	res := &plugin.CodeGeneratorResponse{}
+	res := &plugin.CodeGeneratorResponse{
+		SupportedFeatures: proto.Uint64(uint64(plugin.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)),
+	}
 	for _, file := range req.GetProtoFile() {
 		for _, msg := range file.GetMessageType() {
 			glog.V(1).Infof("Loading a message type %s from package %s", msg.GetName(), file.GetPackage())

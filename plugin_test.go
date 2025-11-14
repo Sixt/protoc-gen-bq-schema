@@ -19,9 +19,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
+	"google.golang.org/protobuf/encoding/prototext"
+	plugin "google.golang.org/protobuf/types/pluginpb"
 )
 
 // schema is an internal representation of generated BigQuery schema
@@ -38,7 +37,7 @@ func joinNames(targets map[string]*schema) (result string) {
 
 func testConvert(t *testing.T, input string, expectedOutputs map[string]string, extras ...func(request *plugin.CodeGeneratorRequest)) {
 	req := plugin.CodeGeneratorRequest{}
-	if err := proto.UnmarshalText(input, &req); err != nil {
+	if err := prototext.Unmarshal([]byte(input), &req); err != nil {
 		t.Fatal("Failed to parse test input: ", err)
 	}
 
@@ -110,7 +109,7 @@ func TestSimple(t *testing.T) {
 		})
 }
 
-// TestIgnoreNonTargetMessage checks if the generator ignores messages without gen_bq_schema.table_name option.
+// TestIgnoreNonTargetMessage checks if the generator ignores messages without gen_bq_schema.bigquery_opts option.
 func TestIgnoreNonTargetMessage(t *testing.T) {
 	testConvert(t, `
 			file_to_generate: "foo.proto"
@@ -410,34 +409,24 @@ func TestModes(t *testing.T) {
 		})
 }
 
-// TestFallbackToOldOptionDefinition tests the generator when a request has
-// a message option using the old option, a simple string for the table name,
-// instead of the new option (a message with multiple values therein).
-func TestFallbackToOldOptionDefinition(t *testing.T) {
+// TestProto3Optional ensures proto3 optional fields are treated as NULLABLE.
+func TestProto3Optional(t *testing.T) {
 	testConvert(t, `
-			file_to_generate: "foo.proto"
-			proto_file <
-				name: "foo.proto"
-				package: "example_package.nested"
-				message_type <
-					name: "FooProto"
-					field < name: "i1" number: 1 type: TYPE_INT32 label: LABEL_OPTIONAL >
-				>
-			>
-		`,
+            file_to_generate: "foo.proto"
+            proto_file <
+                name: "foo.proto"
+                package: "example_package"
+                syntax: "proto3"
+                message_type <
+                    name: "FooProto"
+                    field < name: "i1" number: 1 type: TYPE_INT32 label: LABEL_OPTIONAL proto3_optional: true >
+                    options < [gen_bq_schema.bigquery_opts] <table_name: "foo_table"> >
+                >
+            >
+        `,
 		map[string]string{
-			"example_package/nested/foo_table.schema": `[
-				{ "name": "i1", "type": "INTEGER", "mode": "NULLABLE" }
-			]`,
-		}, func(req *plugin.CodeGeneratorRequest) {
-			// set the extension value using *old* definition
-			msg := req.ProtoFile[0].MessageType[0]
-			if msg.Options == nil {
-				msg.Options = &descriptor.MessageOptions{}
-			}
-			err := proto.SetExtension(msg.Options, e_TableName, proto.String("foo_table"))
-			if err != nil {
-				t.Logf("failed to set extension: %v", err)
-			}
+			"example_package/foo_table.schema": `[
+                { "name": "i1", "type": "INTEGER", "mode": "NULLABLE" }
+            ]`,
 		})
 }
