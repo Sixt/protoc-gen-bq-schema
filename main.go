@@ -226,8 +226,7 @@ func convertField(curPkg *ProtoPackage, desc *descriptor.FieldDescriptorProto, m
 
 	opts := desc.GetOptions()
 	if opts != nil && proto.HasExtension(opts, protos.E_Bigquery) {
-		rawOpt := proto.GetExtension(opts, protos.E_Bigquery)
-		opt := rawOpt.(*protos.BigQueryFieldOptions)
+		opt := proto.GetExtension(opts, protos.E_Bigquery).(*protos.BigQueryFieldOptions)
 		if opt.GetIgnore() {
 			// skip the field below
 			return nil, nil
