@@ -15,7 +15,7 @@
 syntax = "proto3";
 package gen_bq_schema;
 
-option go_package = "protos";
+option go_package = "github.com/sixt/protoc-gen-bq-schema/protos;protos";
 
 import "google/protobuf/descriptor.proto";
 
@@ -48,4 +48,3 @@ extend google.protobuf.FieldOptions {
   // BigQuery field schema generation options.
   BigQueryFieldOptions bigquery = 1021;
 }
-

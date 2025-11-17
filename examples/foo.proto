@@ -1,4 +1,4 @@
-syntax = "proto2";
+syntax = "proto3";
 package foo;
 import "bq_table.proto";
 import "bq_field.proto";
@@ -13,7 +13,7 @@ message Bar {
     repeated int32 a = 1;
   }
 
-  required int32 a = 1;
+  int32 a = 1;
   optional Nested b = 2;
   repeated string c = 3;
 
@@ -30,5 +30,5 @@ message Bar {
 }
 
 message Baz {
-  required int32 a = 1;
+  int32 a = 1;
 }

@@ -14,12 +14,11 @@
 
 BQ_PLUGIN=bin/protoc-gen-bq-schema
 GO_PLUGIN=bin/protoc-gen-go
-PROTOC_GEN_GO_PKG=github.com/golang/protobuf/protoc-gen-go
+PROTOC_GEN_GO_PKG=google.golang.org/protobuf/cmd/protoc-gen-go
 GLOG_PKG=github.com/golang/glog
 PROTO_SRC=bq_table.proto bq_field.proto
 PROTO_GENFILES=protos/bq_table.pb.go protos/bq_field.pb.go
-PROTO_PKG=github.com/golang/protobuf/proto
-PKGMAP=Mgoogle/protobuf/descriptor.proto=$(PROTOC_GEN_GO_PKG)/descriptor
+PROTO_PKG=google.golang.org/protobuf/proto
 EXAMPLES_PROTO=examples/foo.proto
 
 install: $(BQ_PLUGIN)
@@ -28,7 +27,7 @@ $(BQ_PLUGIN): $(PROTO_GENFILES) goprotobuf glog
 	go build -o $@
 
 $(PROTO_GENFILES): $(PROTO_SRC) $(GO_PLUGIN)
-	protoc -I. -Ivendor/protobuf --plugin=$(GO_PLUGIN) --go_out=$(PKGMAP):protos $(PROTO_SRC)
+	protoc -I. --plugin=$(GO_PLUGIN) --go_out=module=github.com/sixt/protoc-gen-bq-schema:. $(PROTO_SRC)
 
 goprotobuf:
 	go get $(PROTO_PKG)
